@@ -1,0 +1,106 @@
+---
+title: "Assignment 1: Reproducibility review"
+author: "Ananda Benediktsdottir"
+date: April 15, 2025
+format: 
+  html:
+    self-contained: true
+    code-tools: 
+      source: true
+
+message: FALSE
+warning: FALSE
+---
+
+```{r}
+#| label: Load libraries and source functions
+
+library(tidyverse)
+library(here) #relative path
+library(glmmTMB) #model
+
+source(here("script/functions.R"))
+```
+
+```{r}
+#| label: data
+
+#Read in and clean mackerel data
+mackerel_data <- read.csv(here("data/mackerel_juvenile_size_prey_relationship.csv"))
+mackerel_data <- clean_data(mackerel_data, "Scomber japonicus") 
+
+#Read in and clean anchovy data
+anchovy_data <- read.csv(here("data/anchovy_larvae_size_prey_relationship.csv"))
+anchovy_data <- clean_data(anchovy_data, "Engraulis japonicus")
+```
+
+
+```{r}
+#| label: preparing data for plotting
+
+#Combining datasets to make facet plots
+combined_data <- bind_rows(anchovy_data, mackerel_data)
+
+#Creating means for prey length/width for individual fish
+mean_data <- combined_data |> 
+  group_by(id, fish_species) |> 
+  summarise(
+    mean_prey_width = mean(prey_width_mm), #calculating mean prey width
+    mean_prey_length = mean(prey_length_mm), #calculating mean prey length
+    Standard_length_mm = unique(Standard_length_mm) #ensuring only one data point per fish
+  )
+
+```
+
+```{r}
+#| label: length plot
+
+#Plotting relationships between mean prey size (length) in the gut and standard length 
+ggplot(mean_data, aes(x = Standard_length_mm, y = mean_prey_length)) +
+  geom_point() +
+  geom_smooth(method = "glm") + 
+  labs(
+    x = "Standard length (mm)",
+    y = "Prey length (mm)"
+  ) + 
+  theme_minimal() +
+  facet_wrap(~fish_species)
+
+```
+
+```{r}
+#| label: length models
+
+#Fitting glmm model to juvenile chub mackerel for prey length
+summary(glmm_gamma_model(mackerel_data, "prey_length_mm")) 
+
+#Fitting glmm model to Japanese anchovy larvae for prey length
+summary(glmm_gamma_model(anchovy_data, "prey_length_mm"))
+
+```
+
+```{r}
+#| label: width plot
+
+#Relationships between mean prey size (width) in the gut and standard length 
+ggplot(mean_data, aes(x = Standard_length_mm, y = mean_prey_width)) +
+  geom_point() +
+  geom_smooth(method = "glm") +  
+  labs(
+    x = "Standard length (mm)",
+    y = "Mean prey width (mm)"
+  ) + 
+  theme_minimal() +
+  facet_wrap(~ fish_species)
+```
+
+
+```{r}
+#| label: width models
+
+#Fitting glmm model to juvenile chub mackerel for prey width
+summary(glmm_gamma_model(mackerel_data, "prey_width_mm"))
+
+#Fitting glmm model to Japanese anchovy larvae for prey width
+summary(glmm_gamma_model(anchovy_data, "prey_width_mm")) 
+```
